@@ -5,93 +5,81 @@ from crud import get_entry, delete_entry, add_entry, update_entry
 
 
 class RequestHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
         parsed_path = urlparse(self.path)
         path_parts = parsed_path.path.strip('/').split('/')
         if len(path_parts) != 2:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Invalid URL format")
+            self.send_error(404, "Invalid URL format")
             return
-        resource, id = path_parts
+        resource, entry_id = path_parts
         try:
-            get_entry(resource, id)
+            data = get_entry(resource, entry_id)
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-        except error:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(f"{resource} {id} not found".encode())
+            self.wfile.write(json.dumps(data).encode())
+        except Exception as e:
+            self.send_error(404, f"{resource} {entry_id} not found")
 
     def do_POST(self):
         parsed_path = urlparse(self.path)
         path_parts = parsed_path.path.strip('/').split('/')
         if len(path_parts) != 1:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Invalid URL format")
+            self.send_error(404, "Invalid URL format")
             return
         resource = path_parts[0]
-        content_length = int(self.headers['Content-Length'])
+        content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
-        fields = json.loads(post_data)
         try:
+            fields = json.loads(post_data)
+            if not fields.get("title") or not fields.get("content"):
+                raise ValueError("Missing required fields")
             add_entry(resource, fields)
-            self.send_response(200)
+            self.send_response(201)
             self.end_headers()
             self.wfile.write(f"Added {resource}".encode())
-        except error:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Failed to add entry")
+        except Exception as e:
+            self.send_error(400, f"Failed to add entry: {str(e)}")
 
     def do_PUT(self):
         parsed_path = urlparse(self.path)
         path_parts = parsed_path.path.strip('/').split('/')
         if len(path_parts) != 2:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Invalid URL format")
+            self.send_error(404, "Invalid URL format")
             return
-        resource, id = path_parts
+        resource, entry_id = path_parts
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        fields = json.loads(post_data)
         try:
-            update_entry(resource, id, fields)
+            fields = json.loads(post_data)
+            update_entry(resource, entry_id, fields)
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(f"Updated {resource} {id}".encode())
-        except error:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(f"{resource} {id} not found".encode())
+            self.wfile.write(f"Updated {resource} {entry_id}".encode())
+        except Exception as e:
+            self.send_error(404, f"{resource} {entry_id} not found")
 
     def do_DELETE(self):
         parsed_path = urlparse(self.path)
         path_parts = parsed_path.path.strip('/').split('/')
         if len(path_parts) != 2:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Invalid URL format")
+            self.send_error(404, "Invalid URL format")
             return
-        resource, id = path_parts
+        resource, entry_id = path_parts
         try:
-            delete_entry(resource, id)
+            delete_entry(resource, entry_id)
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(f"Deleted {resource} {id}".encode())
-        except error:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(f"{resource} {id} not found".encode())
+            self.wfile.write(f"Deleted {resource} {entry_id}".encode())
+        except Exception as e:
+            self.send_error(404, f"{resource} {entry_id} not found")
 
 
-def run(server_class=HTTPServer, handler_class=RequestHandler, port=8080):
-    server_address = ('', port)
+def run(server_class=HTTPServer, handler_class=RequestHandler):
+    server_address = ('', 8080)
     httpd = server_class(server_address, handler_class)
-    print(f"Starting HTTP server on port {port}...")
+    print("Starting HTTP server on port 8081...")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

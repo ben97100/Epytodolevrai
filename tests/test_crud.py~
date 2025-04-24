@@ -1,0 +1,57 @@
+import csv
+import pytest
+from unittest import mock
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from crud import add_entry, get_entry, update_entry, delete_entry
+
+
+def csv_file(tmp_path):
+    file = tmp_path / "test_resource.csv"
+    with file.open('w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['id', 'name', 'age'])
+        writer.writeheader()
+        writer.writerow({'id': '1', 'name': 'Alice', 'age': '30'})
+    return file
+
+
+def mock_get_csv_path(csv_file):
+    with mock.patch('your_module.get_csv_path', return_value=str(csv_file)):
+        yield
+
+
+def mock_get_next_id():
+    with mock.patch('your_module.get_next_id', return_value=2):
+        yield
+
+
+def test_add_entry(mock_get_csv_path, mock_get_next_id, csv_file):
+    add_entry('test_resource', ['Bob', '25'])
+    with csv_file.open(newline='') as f:
+        rows = list(csv.DictReader(f))
+        assert rows[-1]['name'] == 'Bob'
+        assert rows[-1]['age'] == '25'
+        assert rows[-1]['id'] == '2'
+
+
+def test_get_entry(mock_get_csv_path, capsys):
+    get_entry('test_resource', '1')
+    captured = capsys.readouterr()
+    assert "name: Alice" in captured.out
+    assert "age: 30" in captured.out
+
+
+def test_update_entry(mock_get_csv_path, csv_file):
+    update_entry('test_resource', '1', ['Alice_updated', '35'])
+    with csv_file.open(newline='') as f:
+        rows = list(csv.DictReader(f))
+        assert rows[0]['name'] == 'Alice_updated'
+        assert rows[0]['age'] == '35'
+
+
+def test_delete_entry(mock_get_csv_path, csv_file):
+    delete_entry('test_resource', '1')
+    with csv_file.open(newline='') as f:
+        rows = list(csv.DictReader(f))
+        assert len(rows) == 0
