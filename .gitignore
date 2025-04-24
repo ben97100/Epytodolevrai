@@ -2,4 +2,4 @@ test_api.py
 test_crud.py
 *~
 *.log
-.gitignore
+.gitignore~
