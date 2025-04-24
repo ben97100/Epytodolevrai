@@ -3,3 +3,4 @@ test_crud.py
 *~
 *.log
 .gitignore~
+.gitignore
