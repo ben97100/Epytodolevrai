@@ -1,10 +1,12 @@
 import csv
+import os
 import sys
 from utils import get_csv_path, get_next_id
 
-class ResourceNotFoundError(Exception):
-    pass
 
+class ResourceNotFoundError(Exception):
+    """Exception raised when a resource is not found."""
+    pass
 
 def get_entry(resource, id):
     path = get_csv_path(resource)
@@ -12,8 +14,11 @@ def get_entry(resource, id):
         reader = csv.DictReader(csvfile)
         for row in reader:
             if row['id'] == id:
-                return row
-    raise ResourceNotFoundError(f"{resource} {id} not found")
+                for k, v in row.items():
+                    print(f"{k}: {v}")
+                return
+    print(f"{resource} {id} not found", file=sys.stderr)
+    exit(84)
 
 
 def delete_entry(resource, id):
@@ -28,12 +33,13 @@ def delete_entry(resource, id):
                 found = True
                 rows.remove(row)
     if not found:
-        raise ResourceNotFoundError(f"{resource} {id} not found")
+        print(f"{resource} {id} not found", file=sys.stderr)
+        exit(84)
     with open(path, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
-    return f"Deleted {resource} {id}"
+    print(f"Deleted {resource} {id}")
 
 
 def add_entry(resource, fields):
@@ -43,7 +49,8 @@ def add_entry(resource, fields):
         headers = reader.fieldnames
         rows = list(reader)
     if len(fields) != len(headers) - 1:
-        raise ValueError("Invalid number of fields")
+        print("Error: Invalid number of fields", file=sys.stderr)
+        exit(84)
     new_id = get_next_id(rows)
     new_entry = {'id': str(new_id)}
     for i, key in enumerate(headers[1:]):
@@ -51,7 +58,7 @@ def add_entry(resource, fields):
     with open(path, 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writerow(new_entry)
-    return new_entry
+    print(f"Added {resource} {new_id}")
 
 
 def update_entry(resource, id, fields):
@@ -67,9 +74,10 @@ def update_entry(resource, id, fields):
                 row[key] = fields[i]
             updated = True
     if not updated:
-        raise ResourceNotFoundError(f"{resource} {id} not found")
+        print(f"{resource} {id} not found", file=sys.stderr)
+        exit(84)
     with open(path, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
-    return f"Updated {resource} {id}"
+    print(f"Updated {resource} {id}")
