@@ -3,7 +3,9 @@ from urllib.parse import parse_qs, urlparse
 import json
 from crud import get_entry, add_entry, update_entry, delete_entry
 
+
 PORT = 8081
+
 
 class SimpleCRUDHandler(BaseHTTPRequestHandler):
     def _set_headers(self, code=200, content_type='application/json'):
@@ -20,7 +22,7 @@ class SimpleCRUDHandler(BaseHTTPRequestHandler):
         path_parts = self.path.strip("/").split("/")
         if len(path_parts) != 2:
             self._set_headers(400)
-            self.wfile.write(json.dumps({"error": "Invalid GET path"}).encode())
+            self.wfile.write(json.dumps({"error": "Invalid GET "}).encode())
             return
         resource, id = path_parts
         try:
