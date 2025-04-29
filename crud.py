@@ -1,6 +1,4 @@
 import csv
-import os
-import sys
 from utils import get_csv_path, get_next_id
 
 
@@ -8,17 +6,15 @@ class ResourceNotFoundError(Exception):
     """Exception raised when a resource is not found."""
     pass
 
+
 def get_entry(resource, id):
     path = get_csv_path(resource)
     with open(path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if row['id'] == id:
-                for k, v in row.items():
-                    print(f"{k}: {v}")
-                return
-    print(f"{resource} {id} not found", file=sys.stderr)
-    exit(84)
+                return row
+    raise ResourceNotFoundError(f"{resource} {id} not found")
 
 
 def delete_entry(resource, id):
@@ -27,19 +23,20 @@ def delete_entry(resource, id):
     found = False
     with open(path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
+        headers = reader.fieldnames
         rows = list(reader)
         for row in rows:
             if row['id'] == id:
                 found = True
                 rows.remove(row)
+                break
     if not found:
-        print(f"{resource} {id} not found", file=sys.stderr)
-        exit(84)
+        raise ResourceNotFoundError(f"{resource} {id} not found")
     with open(path, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=rows[0].keys())
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
-    print(f"Deleted {resource} {id}")
+    return {"message": f"Deleted {resource} {id}"}
 
 
 def add_entry(resource, fields):
@@ -49,8 +46,7 @@ def add_entry(resource, fields):
         headers = reader.fieldnames
         rows = list(reader)
     if len(fields) != len(headers) - 1:
-        print("Error: Invalid number of fields", file=sys.stderr)
-        exit(84)
+        raise ValueError("Invalid number of fields")
     new_id = get_next_id(rows)
     new_entry = {'id': str(new_id)}
     for i, key in enumerate(headers[1:]):
@@ -58,7 +54,7 @@ def add_entry(resource, fields):
     with open(path, 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writerow(new_entry)
-    print(f"Added {resource} {new_id}")
+    return {"message": f"Added {resource} {new_id}", "id": str(new_id)}
 
 
 def update_entry(resource, id, fields):
@@ -73,11 +69,11 @@ def update_entry(resource, id, fields):
             for i, key in enumerate(headers[1:]):
                 row[key] = fields[i]
             updated = True
+            break
     if not updated:
-        print(f"{resource} {id} not found", file=sys.stderr)
-        exit(84)
+        raise ResourceNotFoundError(f"{resource} {id} not found")
     with open(path, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
-    print(f"Updated {resource} {id}")
+    return {"message": f"Updated {resource} {id}"}
