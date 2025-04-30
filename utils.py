@@ -2,7 +2,7 @@ import os
 
 
 def get_csv_path(resource):
-    return os.path.join("data", f"{resource}s.csv")
+    return os.path.join("data", f"{resource}.csv")
 
 
 def get_next_id(rows):
